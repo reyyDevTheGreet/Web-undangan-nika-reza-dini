@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Undangan Pernikahan Reza & Dini</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="icon" type="image/png" href="favicon-webRey.png"></link>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -403,13 +403,8 @@
             </div>
           </div>
           <div class="field">
-            <label>Jumlah Tamu (termasuk Anda)</label>
-            <select id="rGuests">
-              <option value="1">1 orang</option>
-              <option value="2">2 orang</option>
-              <option value="3">3 orang</option>
-              <option value="4">4 orang</option>
-            </select>
+            <label>Jumlah Tamu yang Hadir (termasuk Anda)</label>
+            <input type="number" id="rGuests" min="1" max="30" value="1" inputmode="numeric" placeholder="Contoh: 1, 5, 7, dst">
           </div>
           <div class="field">
             <label>Ucapan &amp; Doa</label>
@@ -505,16 +500,27 @@
 </div>
 
 <script>
+
 const SUPABASE_URL = "https://gbtqvjibwllrauilhegw.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_u31rHRobOuRGZ2ITda10OA_6DSBEcBe";
 const ADMIN_PASSCODE = "REZADINI2026"; // ganti kode akses panel mempelai di sini
-
-
 try{
   if(SUPABASE_URL.startsWith("http")){
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 }catch(e){ console.warn('Supabase belum dikonfigurasi'); }
+
+// -------- Helper link personal (global, dipakai admin & tamu) --------
+function buildShareUrl(nameParam){
+  const base = window.location.origin + window.location.pathname;
+  return nameParam ? `${base}?to=${encodeURIComponent(nameParam)}` : window.location.href;
+}
+function buildWaLink(nameParam, phone){
+  const link = buildShareUrl(nameParam);
+  const text = `Assalamu'alaikum${nameParam ? ' ' + nameParam : ''}, kami mengundang Bapak/Ibu/Saudara/i untuk hadir di pernikahan Reza & Dini. Berikut undangan digitalnya:\n${link}\n\nMohon doa restu & kehadirannya 🙏`;
+  return phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+window.__buildWaLink = buildWaLink;
 
 (function(){
   // -------- Data keluarga (edit langsung di sini) --------
@@ -701,7 +707,8 @@ try{
     e.preventDefault();
     const name = document.getElementById('rName').value.trim();
     const attendInput = document.querySelector('#attendGroup input:checked');
-    const guests = document.getElementById('rGuests').value;
+    const guestsRaw = document.getElementById('rGuests').value;
+    const guests = Math.max(1, parseInt(guestsRaw) || 1);
     const msg = document.getElementById('rMsg').value.trim();
     if(!name || !attendInput){ alert('Mohon lengkapi nama dan konfirmasi kehadiran ya.'); return; }
     if(!supabase){ alert('Database belum dikonfigurasi oleh mempelai. Coba lagi nanti ya.'); return; }
@@ -709,7 +716,7 @@ try{
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.textContent = 'Mengirim...'; submitBtn.disabled = true;
 
-    const { error } = await supabase.from('rsvp').insert([{ name, attend: attendInput.value, guests: parseInt(guests), message: msg }]);
+    const { error } = await supabase.from('rsvp').insert([{ name, attend: attendInput.value, guests: guests, message: msg }]);
     if(error){
       console.error(error);
       submitBtn.textContent = 'Gagal, coba lagi'; submitBtn.disabled = false;
@@ -719,20 +726,7 @@ try{
     renderWishes(items);
     document.getElementById('rsvpForm').reset();
     document.querySelectorAll('#attendGroup .radio-pill').forEach(p => p.classList.remove('active'));
-    submitBtn.textContent = '✓ Terkirim, Terima Kasih!';
-    setTimeout(() => { submitBtn.textContent = 'Kirim Konfirmasi'; submitBtn.disabled = false; }, 2200);
-  });
-
-  // -------- Helper link (dipakai admin untuk kirim undangan personal) --------
-  function buildShareUrl(nameParam){
-    const base = window.location.origin + window.location.pathname;
-    return nameParam ? `${base}?to=${encodeURIComponent(nameParam)}` : window.location.href;
-  }
-  function buildWaLink(nameParam, phone){
-    const link = buildShareUrl(nameParam);
-    const text = `Assalamu'alaikum${nameParam ? ' ' + nameParam : ''}, kami mengundang Bapak/Ibu/Saudara/i untuk hadir di pernikahan Reza & Dini. Berikut undangan digitalnya:\n${link}\n\nMohon doa restu & kehadirannya 🙏`;
-    return phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
-  }
+  }); // end rsvpForm submit
 
   // -------- Realtime: update tally & wishes otomatis saat ada RSVP baru --------
   if(supabase){
@@ -749,9 +743,6 @@ try{
       if(rect.top < window.innerHeight) el.classList.add('in');
     });
   });
-
-  // expose helper for admin panel reuse
-  window.__buildWaLink = buildWaLink;
 })();
 
 // ================= ADMIN LOGIC =================
