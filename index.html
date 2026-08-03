@@ -622,7 +622,31 @@ window.__buildWaLink = buildWaLink;
     else { bgm.pause(); musicBtn.textContent = '🔇'; }
   });
 
-  // -------- Reveal saat scroll --------
+// -------- Pause musik saat user pindah tab / minimize --------
+(function(){
+  const bgm = document.getElementById('bgm');
+  const musicBtn = document.getElementById('musicToggle');
+  let wasPlayingBeforeHidden = false;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // User meninggalkan tab / minimize / switch app
+      wasPlayingBeforeHidden = !bgm.paused;
+      if (!bgm.paused) {
+        bgm.pause();
+        musicBtn.textContent = '🔇';
+      }
+    } else {
+      // User balik ke tab ini
+      if (wasPlayingBeforeHidden) {
+        bgm.play().catch(() => {});
+        musicBtn.textContent = '🔊';
+      }
+    }
+  });
+})();
+
+// -------- Reveal saat scroll --------
   function revealOnScroll(){
     const targets = document.querySelectorAll('.reveal, .divider');
     const io = new IntersectionObserver((entries) => {
